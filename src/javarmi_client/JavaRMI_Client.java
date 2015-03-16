@@ -30,7 +30,7 @@ public class JavaRMI_Client {
      */
     public static void main(String[] args) throws IOException {
         // TODO code application logic here
-        int i = 2, j;
+        int i = 10, j;
         for (j=1; j<=i; j++) {
         
             try {
