@@ -8,6 +8,7 @@ import imagermi.ImageInterface;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.MalformedURLException;
 import java.rmi.*;
 import java.rmi.registry.LocateRegistry;
@@ -29,60 +30,78 @@ public class JavaRMI_Client {
      */
     public static void main(String[] args) throws IOException {
         // TODO code application logic here
-        int i = 10, j;
-        long time = 0;
-        for (j=1; j<=i; j++) {
-        
-            try {
-                
-                Date date = new Date();
-                System.out.println(date);
-                
-                System.out.println("Read file ...");
-                File file = new File(String.valueOf(j)+".jpg");
-                BufferedImage image = ImageIO.read(file);
+        String files, format, path = "C:\\cygwin64\\home\\user\\coba\\SISTER\\";
+        File folder = new File(path);
+        File[] listOfFiles = folder.listFiles();
+        PrintStream out = new PrintStream("filename.txt");
+        int i;
+        long time = 0, tottime = 0;
+        for (i=0; i<listOfFiles.length; i++) {
+            if (listOfFiles[i].isFile()) {
+                files = listOfFiles[i].getName();
+                format = "";
+                if (files.endsWith(".png") || files.endsWith(".PNG")) {
+                    format = "PNG";
+                } else if (files.endsWith(".jpg") || files.endsWith(".JPG")) {
+                    format = "JPEG";
+                }
+                if (!format.equals("")) {
+                    try {
+                        
+                        out.println(files);
 
-                int x, y;
-                int h = image.getHeight();
-                int w = image.getWidth();
-                int[] input = new int[h*w];
+                        Date date = new Date();
+                        //System.out.println(date);
 
-                for (y=0; y<h; y++) {
-                    for (x=0; x<w; x++) {
-                        input[x + w*y] = image.getRGB(x, y);
+                        out.println("Read file ...");
+                        File file = new File(path+files);
+                        BufferedImage image = ImageIO.read(file);
+
+                        int x, y;
+                        int h = image.getHeight();
+                        int w = image.getWidth();
+                        int[] input = new int[h*w];
+
+                        for (y=0; y<h; y++) {
+                            for (x=0; x<w; x++) {
+                                input[x + w*y] = image.getRGB(x, y);
+                            }
+                        }
+
+                        out.println("File readed.");
+
+                        out.println("Try connect ...");
+                        Registry registry = LocateRegistry.getRegistry("localhost");
+                        ImageInterface stub = (ImageInterface) registry.lookup("toBW");
+                        out.println("Connected.");
+
+                        out.println("Do RMI ...");
+
+                        int[] output = stub.toBW(0, 0, w, h, input, 0, w);
+                        BufferedImage dest = new BufferedImage(w, h, BufferedImage.TYPE_BYTE_GRAY);
+
+                        for (y=0; y<h; y++) {
+                            for (x=0; x<w; x++) {
+                                dest.setRGB(x, y, output[x + w*y]);
+                            }
+                        }
+
+                        File fbw = new File(path+"BW\\BW-"+files);
+                        if (!ImageIO.write(dest, format, fbw)) {
+                            throw new RuntimeException("Unexpected error writing image");
+                        }
+                        time = new Date().getTime() - date.getTime();
+                        tottime += time;
+                        //System.out.println(date);
+                        out.println("Done with time execution: "+etaConvert(time)+".");
+
+                    } catch (NotBoundException | MalformedURLException | RemoteException ex) {
+                        Logger.getLogger(JavaRMI_Client.class.getName()).log(Level.SEVERE, null, ex);
                     }
                 }
-
-                System.out.println("File readed.");
-
-                System.out.println("Try connect ...");
-                Registry registry = LocateRegistry.getRegistry("10.151.12.201");
-                ImageInterface stub = (ImageInterface) registry.lookup("toBW");
-                System.out.println("Connected.");
-
-                System.out.println("Do RMI ...");
-                
-                int[] output = stub.toBW(0, 0, w, h, input, 0, w);
-                BufferedImage dest = new BufferedImage(w, h, BufferedImage.TYPE_BYTE_GRAY);
-
-                for (y=0; y<h; y++) {
-                    for (x=0; x<w; x++) {
-                        dest.setRGB(x, y, output[x + w*y]);
-                    }
-                }
-
-                File fbw = new File("BW-"+String.valueOf(j)+".jpg");
-                if (!ImageIO.write(dest, "JPEG", fbw)) {
-                    throw new RuntimeException("Unexpected error writing image");
-                }
-                time = new Date().getTime() - date.getTime();
-                System.out.println(date);
-                System.out.println("Done with time execution: "+etaConvert(time)+".");
-
-            } catch (NotBoundException | MalformedURLException | RemoteException ex) {
-                Logger.getLogger(JavaRMI_Client.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
+        out.println("Done with total time execution: +/- "+etaConvert(tottime)+".");
         
     }
     private static String etaConvert(long l_d) {
