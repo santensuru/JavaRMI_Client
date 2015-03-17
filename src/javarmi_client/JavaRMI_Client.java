@@ -5,9 +5,7 @@
  */
 package javarmi_client;
 import imagermi.ImageInterface;
-import java.awt.Toolkit;
 import java.awt.image.BufferedImage;
-import java.awt.image.MemoryImageSource;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
