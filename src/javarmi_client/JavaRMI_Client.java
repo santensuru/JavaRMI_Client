@@ -57,7 +57,7 @@ public class JavaRMI_Client {
                     
                     Thread task = new doExecution(files, format, i);
                     task.start();
-                    if ((i+1)%6 == 0)
+                    if ((i+1)%16 == 0)
                         task.join(joiner);
                 }
             }
@@ -106,10 +106,12 @@ public class JavaRMI_Client {
 
                 out.println(index+". "+"Try connect ...");
                 Registry registry;
-                if (index%2 == 0)
+                if (index%3 == 0)
                     registry = LocateRegistry.getRegistry("10.151.12.201");
-                else
+                else if (index%3 == 1)
                     registry = LocateRegistry.getRegistry("10.151.12.202");
+                else
+                    registry = LocateRegistry.getRegistry("localhost");
                 ImageInterface stub = (ImageInterface) registry.lookup("toBW");
                 out.println(index+". "+"Connected.");
 
