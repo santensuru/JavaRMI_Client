@@ -57,7 +57,7 @@ public class JavaRMI_Client {
                     
                     Thread task = new doExecution(files, format, i);
                     task.start();
-                    if ((i+1)%4 == 0)
+                    if ((i+1)%8 == 0)
                         task.join(joiner);
                 }
             }
@@ -133,8 +133,10 @@ public class JavaRMI_Client {
                 out.println(index+". "+"Done with time execution: "+etaConvert(time)+".");
 
             } catch (NotBoundException | MalformedURLException | RemoteException ex) {
+                out.println(ex);
                 Logger.getLogger(JavaRMI_Client.class.getName()).log(Level.SEVERE, null, ex);
             } catch (IOException ex) {
+                out.println(ex);
                 Logger.getLogger(JavaRMI_Client.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
