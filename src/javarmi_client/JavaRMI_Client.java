@@ -30,6 +30,7 @@ public class JavaRMI_Client {
     /**
      * @param args the command line arguments
      * @throws java.io.IOException
+     * @throws java.lang.InterruptedException
      */
     public static void main(String[] args) throws IOException, InterruptedException {
         // TODO code application logic here
@@ -56,7 +57,7 @@ public class JavaRMI_Client {
                     
                     Thread task = new doExecution(files, format, i);
                     task.start();
-                    if ((i+1)%16 == 0)
+                    if ((i+1)%2 == 0)
                         task.join(joiner);
                 }
             }
@@ -104,7 +105,11 @@ public class JavaRMI_Client {
                 out.println(index+". "+"File readed.");
 
                 out.println(index+". "+"Try connect ...");
-                Registry registry = LocateRegistry.getRegistry("localhost");
+                Registry registry;
+                if (index%2 == 0)
+                    registry = LocateRegistry.getRegistry("10.151.12.201");
+                else
+                    registry = LocateRegistry.getRegistry("10.151.12.202");
                 ImageInterface stub = (ImageInterface) registry.lookup("toBW");
                 out.println(index+". "+"Connected.");
 
