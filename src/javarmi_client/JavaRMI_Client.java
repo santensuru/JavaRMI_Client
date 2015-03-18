@@ -57,7 +57,7 @@ public class JavaRMI_Client {
                     
                     Thread task = new doExecution(files, format, i);
                     task.start();
-                    if ((i+1)%2 == 0)
+                    if ((i+1)%4 == 0)
                         task.join(joiner);
                 }
             }
