@@ -13,6 +13,7 @@ import java.net.MalformedURLException;
 import java.rmi.*;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -26,6 +27,7 @@ public class JavaRMI_Client {
     
     static volatile String path = "C:\\cygwin64\\home\\user\\coba\\SISTER\\";
     static volatile PrintStream out;
+    static volatile ArrayList<Pair<String, String>> list = new ArrayList<>();
     
     /**
      * @param args the command line arguments
@@ -35,15 +37,15 @@ public class JavaRMI_Client {
     public static void main(String[] args) throws IOException, InterruptedException {
         // TODO code application logic here
         
+        String[] server = {"10.151.12.201", "10.151.12.202"};
         long joiner = 0;
-        Date tot = new Date();
         String files, format;
         File folder = new File(path);
         File[] listOfFiles = folder.listFiles();
         int length = listOfFiles.length;
-        out = new PrintStream("filename_"+tot.toString().replaceAll(":", ".").replaceAll(" ", "-")+".txt");
+        Date now = new Date();
+        out = new PrintStream("filename_"+now.toString().replaceAll(":", ".").replaceAll(" ", "-")+".txt");
         int i;
-        long tottime = 0;
         for (i=0; i<length; i++) {
             if (listOfFiles[i].isFile()) {
                 files = listOfFiles[i].getName();
@@ -55,85 +57,84 @@ public class JavaRMI_Client {
                 }
                 if (!format.equals("")) {
                     
-                    Thread task = new doExecution(files, format, i);
-                    task.start();
-                    if ((i+1)%4 == 0)
-                        task.join(joiner);
+                    list.add(new Pair(files, format));
                 }
             }
         }
-        tottime = new Date().getTime() - tot.getTime();
-        out.println("Done with total time execution: +/- "+etaConvert(tottime)+".");
+        
+        for (i=0; i<4; i++) {
+            Thread task = new doExecution(server[i%2], i+1);
+            task.start();
+        }
         
     }
     
     private static class doExecution extends Thread {
-        String files, format;
-        long time;
+        long tottime = 0, time;
+        String dest;
         int index;
         
-        doExecution(String files, String format, int index) {
-            this.files = files;
-            this.format = format;
+        doExecution(String dest, int index) {
+            this.dest = dest;
             this.index = index;
         }
         
         @Override
         public void run() {
             try {
-                        
-                out.println(index+". "+files);
-
-                Date date = new Date();
-                //System.out.println(date);
-
-                out.println(index+". "+"Read file ...");
-                File file = new File(path+files);
-                BufferedImage image = ImageIO.read(file);
-
-                int x, y;
-                int h = image.getHeight();
-                int w = image.getWidth();
-                int[] input = new int[h*w];
-
-                for (y=0; y<h; y++) {
-                    for (x=0; x<w; x++) {
-                        input[x + w*y] = image.getRGB(x, y);
-                    }
-                }
-
-                out.println(index+". "+"File readed.");
-
-                out.println(index+". "+"Try connect ...");
                 Registry registry;
-                if (index%3 == 0)
-                    registry = LocateRegistry.getRegistry("10.151.12.201");
-                else if (index%3 == 1)
-                    registry = LocateRegistry.getRegistry("10.151.12.202");
-                else
-                    registry = LocateRegistry.getRegistry("localhost");
+                out.println(index+". "+"Try connect ...");
+                registry = LocateRegistry.getRegistry(dest);
                 ImageInterface stub = (ImageInterface) registry.lookup("toBW");
                 out.println(index+". "+"Connected.");
+                
+                int i;
+                for (i=index; i<list.size(); i+=4) {
+                    out.println(index+"."+i+". "+list.get(i).getLeft());
 
-                out.println(index+". "+"Do RMI ...");
+                    Date date = new Date();
+                    //System.out.println(date);
 
-                int[] output = stub.toBW(0, 0, w, h, input, 0, w);
-                BufferedImage dest = new BufferedImage(w, h, BufferedImage.TYPE_BYTE_GRAY);
+                    out.println(index+"."+i+". "+"Read file ...");
+                    File file = new File(path+list.get(i).getLeft());
+                    BufferedImage image = ImageIO.read(file);
 
-                for (y=0; y<h; y++) {
-                    for (x=0; x<w; x++) {
-                        dest.setRGB(x, y, output[x + w*y]);
+                    int x, y;
+                    int h = image.getHeight();
+                    int w = image.getWidth();
+                    int[] input = new int[h*w];
+
+                    for (y=0; y<h; y++) {
+                        for (x=0; x<w; x++) {
+                            input[x + w*y] = image.getRGB(x, y);
+                        }
                     }
-                }
 
-                File fbw = new File(path+"BW\\BW-"+files);
-                if (!ImageIO.write(dest, format, fbw)) {
-                    throw new RuntimeException("Unexpected error writing image");
-                }
-                time = new Date().getTime() - date.getTime();
-                //System.out.println(date);
-                out.println(index+". "+"Done with time execution: "+etaConvert(time)+".");
+                    out.println(index+"."+i+". "+"File readed.");
 
+                    out.println(index+"."+i+". "+"Do RMI ...");
+
+                    int[] output = stub.toBW(0, 0, w, h, input, 0, w);
+                    BufferedImage dest = new BufferedImage(w, h, BufferedImage.TYPE_BYTE_GRAY);
+
+                    for (y=0; y<h; y++) {
+                        for (x=0; x<w; x++) {
+                            dest.setRGB(x, y, output[x + w*y]);
+                        }
+                    }
+
+                    File fbw = new File(path+"BW\\BW-"+list.get(i).getLeft());
+                    if (!ImageIO.write(dest, list.get(i).getRight(), fbw)) {
+                        throw new RuntimeException("Unexpected error writing image");
+                    }
+                    time = new Date().getTime() - date.getTime();
+                    tottime += time;
+                    //System.out.println(date);
+                    out.println(index+"."+i+". "+"Done with time execution: "+etaConvert(time)+".");
+                }
+                
+                out.println(index+". "+"Done with total time execution: +/- "+etaConvert(tottime)+".");
+                
             } catch (NotBoundException | MalformedURLException | RemoteException ex) {
                 out.println(ex);
                 Logger.getLogger(JavaRMI_Client.class.getName()).log(Level.SEVERE, null, ex);
